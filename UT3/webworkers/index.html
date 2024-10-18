@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Webworkers bench</title>
+  </head>
+  <body>
+    <h1>Webworkers bench</h1>
+    <div>
+      <p>Por favor abrir la consola de desarrollo del navegador.</p>
+      <p>En el objeto global <code>window</code> se han cargado funciones para manejar 
+        <i>webworkers</i>:
+      </p>
+      <ul>
+        <li><code>newWorker</code>: permite crear un webworker a partir de una función de
+          Javascript.</li>
+        <li><code>echoWorker</code>: crea un webworker que emite de vuelta todos los mensajes que se
+          le mandan.</li>
+        <li><code>tickWorker(period = 500)</code>: crea un webworker que emite un mensaje cada
+          <code>period</code> milisegundos.</li>
+        <li><code>workerFunction(fn)</code>: crea una función que ejecuta la función <code>fn</code>
+          en un nuevo <i>webworker</i> cada vez que es invocada. El código de la función 
+          <code>fn</code> no tiene que tener referencias externas, y los argumentos tienen que ser
+          serializables.</li>
+      </ul>
+
+    </div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
