@@ -75,11 +75,13 @@ async function validateTest(test, { duration: expDuration, value: expValue, erro
     catch (rejection) {
         if (expError === undefined) {
             console.log(`${test.name} - Unexpected error: ${rejection}`);
+            console.log(`${test.name} con errores`);
             return false;
         }
         
         if (!rejection?.message.startsWith(expError)) {
             console.log(`${test.name} - Expected error: ${expError}\nActual error: ${rejection}`);
+            console.log(`${test.name} con errores`);
             return false;
         }
     }
@@ -92,14 +94,17 @@ async function validateTest(test, { duration: expDuration, value: expValue, erro
 
     if (duration < minAllowed || duration > maxAllowed) {
         console.log(`${test.name} - Expected duration was ${expDuration}, but was too far away: ${duration}`);
+        console.log(`${test.name} con errores`);
         return false;
     }
     
     if (expValue !== undefined && result != expValue) {
         console.log(`${test.name} - Expected result was ${expValue}, but actual result was ${result}`);
+        console.log(`${test.name} con errores`);
         return false;
     }
 
+    console.log(`${test.name} exitoso!`);
     return true;
 }
 
