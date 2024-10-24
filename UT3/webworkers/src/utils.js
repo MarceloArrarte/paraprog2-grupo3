@@ -32,12 +32,16 @@ export function tickWorker(period = 500) {
 export function workerFunction(fn) {
   const code = `self.onmessage = ({ data }) => 
     self.postMessage((${fn}).call(self, ...data));`;
-  return (...args) => new Promise((resolve) => {
+  return (...args) => new Promise((resolve, reject) => {
     const worker = newWorker(code);
     worker.onmessage = (event) => {
       resolve(event.data);
       worker.terminate();
     };
+    worker.onerror = (event) => {
+      reject(event);
+      worker.terminate();
+    }
     worker.postMessage(args);
   });
 } // function workerFunction
