@@ -2,7 +2,7 @@ import { workerFunction } from "./utils";
 
 export function randomSubsetSumProblem(args) {
   const {
-    length = 11,
+    length = 26,
     maxValue = 500,
   } = args ?? {};
   const randNum = () => Math.floor(Math.random() * (maxValue + 1));
@@ -15,52 +15,64 @@ export function randomSubsetSumProblem(args) {
 } // function randomSubsetSumProblem
 
 
-
-function _naiveSubsetSum(list, target) {
-  if (list.length == 0) {
-    return null;
-  }
-
-  for (const n of list) {
+export function _naiveSubsetSum(list, target) {
+  const copy = [...list];
+  while (copy.length > 0) {
+    const n = copy.pop();
     if (n == target) {
       return [n];
     }
-
-    const rest = list.filter((x) => x != n);
-    const solution = _naiveSubsetSum(rest, target - n);
-    
-    if (solution != null) {
-      return [n, ...solution]
+    else {
+      const maybeSolution = _naiveSubsetSum(copy, target - n);
+      if (maybeSolution) {
+        return [n, ...maybeSolution];
+      }
     }
   }
-  
+
   return null;
 }
 
-
 export async function naiveSubsetSum(list, target) {
-  if (list.length == 0) {
-    return null;
-  }
-
   const runSubsetSumWorker = workerFunction(_naiveSubsetSum);
 
-  const promises = list.map(async n => {
+  const copy = [...list]
+
+  while (copy.length > 0) {
+    const n = copy.pop();
     if (n == target) {
       return [n];
     }
-
-    const rest = list.filter((x) => x != n);
-    const solution = await runSubsetSumWorker(rest, target - n);
-    
-    if (solution != null) {
-      return [n, ...solution]
+    else {
+      const maybeSolution = await runSubsetSumWorker(copy, target - n);
+      if (maybeSolution) {
+        return [n, ...maybeSolution];
+      }
     }
-  });
+  }
 
-  const results = await Promise.all(promises);
-  const maybeSolution = results.find(res => !!res) ?? null;
-  return maybeSolution;
+  return null;
+}
+
+export async function naiveSubsetSum(list, target) {
+  const runSubsetSumWorker = workerFunction(_naiveSubsetSum);
+
+  const copy = [...list]
+
+  while (copy.length > 0) {
+    const n = copy.pop();
+    if (n == target) {
+      return [n];
+    }
+    else {
+      const maybeSolution = await runSubsetSumWorker(copy, target - n);
+      if (maybeSolution) {
+        return [n, ...maybeSolution];
+      }
+    }
+  }
+
+  return null;
 }
 
 
@@ -79,7 +91,8 @@ export async function naiveSubsetSum(list, target) {
 // } // function naiveSubsetSum
 
 export async function testSubsetSum() {
-  const [ns, target] = randomSubsetSumProblem();
+  // const [ns, target] = randomSubsetSumProblem();
+  const {ns, target} = problem;
   // const [ns, target] = [[3, 34, 4, 12, 5, 2], 9]
   // const [ns, target] = [[3, 1, 5, 9, 12, 7, 2, 4, 10, 6, 8], 15]
   // const [ns, target] = [[3, 1, 5, 9, 12, 7, 2, 4, 10, 6, 8, 20, 30], 65]
@@ -93,3 +106,40 @@ export async function testSubsetSum() {
   const time = (Date.now() - startTime) / 1e3;
   return { ns, target, firstSolution, time };
 } // function testSubsetSum
+
+let problem = {
+  "ns": [
+      345,
+      21,
+      449,
+      59,
+      405,
+      385,
+      60,
+      250,
+      64,
+      282,
+      304,
+      230,
+      110,
+      0,
+      437,
+      326,
+      44,
+      410,
+      30,
+      389,
+      478,
+      381,
+      442,
+      377,
+      448
+  ],
+  "target": 103,
+  "firstSolution": [
+      44,
+      0,
+      59
+  ],
+  "time": 6.437
+}
