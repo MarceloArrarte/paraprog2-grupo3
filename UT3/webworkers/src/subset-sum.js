@@ -2,8 +2,8 @@ import { workerFunction } from "./utils";
 
 export function randomSubsetSumProblem(args) {
   const {
-    length = 26,
-    maxValue = 500,
+    length = 50,
+    maxValue = 2000,
   } = args ?? {};
   const randNum = () => Math.floor(Math.random() * (maxValue + 1));
   const ns = [...new Set(Array.from({ length }, randNum))];
@@ -24,9 +24,11 @@ export function _naiveSubsetSum(list, target) {
       return [n];
     }
     else {
-      const maybeSolution = _naiveSubsetSum(copy, target - n);
-      if (maybeSolution) {
-        return [n, ...maybeSolution];
+      if (n < target) {
+        const maybeSolution = _naiveSubsetSum(copy, target - n);
+        if (maybeSolution) {
+          return [n, ...maybeSolution];
+        }
       }
     }
   }
@@ -87,8 +89,8 @@ export function* sequentialNaiveSubsetSum(ns, target) {
 } // function naiveSubsetSum
 
 export async function testSubsetSum() {
-  const [ns, target] = randomSubsetSumProblem();
-  // const {ns, target} = problem;
+  // const [ns, target] = randomSubsetSumProblem();
+  const {ns, target} = problem;
 
   const startTime = Date.now();
   // const firstSolution = sequentialNaiveSubsetSum(ns, target).next().value ?? null;
@@ -100,31 +102,63 @@ export async function testSubsetSum() {
 
 let problem = {
   "ns": [
-      438,
-      348,
-      296,
-      397,
-      484,
-      94,
-      254,
-      148,
-      140,
-      209,
-      126,
-      61,
-      25,
-      196,
-      193,
-      338,
-      342,
-      3,
-      29,
-      498,
-      476,
-      176,
-      240,
-      475,
-      199
+      1174,
+      1504,
+      1289,
+      679,
+      486,
+      1669,
+      462,
+      167,
+      1930,
+      896,
+      1163,
+      1243,
+      1839,
+      1076,
+      524,
+      1534,
+      1357,
+      1366,
+      1404,
+      840,
+      198,
+      418,
+      1538,
+      749,
+      811,
+      1339,
+      675,
+      223,
+      164,
+      1467,
+      933,
+      1166,
+      407,
+      959,
+      774,
+      1037,
+      1743,
+      1727,
+      472,
+      1726,
+      1682,
+      720,
+      846,
+      85,
+      195,
+      1835,
+      341,
+      788,
+      1632,
+      888
   ],
-  "target": 413
+  "target": 1177,
+  "firstSolution": [
+      341,
+      195,
+      223,
+      418
+  ],
+  "time": 0.241
 }
