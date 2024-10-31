@@ -16,6 +16,7 @@ export function randomSubsetSumProblem(args) {
 
 
 export function _naiveSubsetSum(list, target) {
+
   const copy = [...list];
   while (copy.length > 0) {
     const n = copy.pop();
@@ -33,113 +34,103 @@ export function _naiveSubsetSum(list, target) {
   return null;
 }
 
-export async function naiveSubsetSum(list, target) {
+export async function parallelNaiveSubsetSum(list, target) {
   const runSubsetSumWorker = workerFunction(_naiveSubsetSum);
+  
+  const copy = [...list];
 
-  const copy = [...list]
+  const promises = [];
 
   while (copy.length > 0) {
     const n = copy.pop();
     if (n == target) {
-      return [n];
+      promises.push(Promise.resolve([n]));
     }
     else {
-      const maybeSolution = await runSubsetSumWorker(copy, target - n);
-      if (maybeSolution) {
-        return [n, ...maybeSolution];
-      }
+      promises.push(
+        runSubsetSumWorker(copy, target - n)
+          .then(maybeSolution => {
+            if (maybeSolution) {
+              return [n, ...maybeSolution];
+            }
+            else {
+              return Promise.reject('Sin solución en esta rama.');
+            }
+          })
+      );
     }
   }
 
-  return null;
+  try {
+    const result = await Promise.any(promises);
+    return result;
+  }
+  catch (err) {
+    console.log('Todas las promesas rechazadas, no hay solución.');
+    console.log(err);
+    return null;
+  }
 }
 
-export async function naiveSubsetSum(list, target) {
-  const runSubsetSumWorker = workerFunction(_naiveSubsetSum);
 
-  const copy = [...list]
-
-  while (copy.length > 0) {
-    const n = copy.pop();
-    if (n == target) {
-      return [n];
+export function* sequentialNaiveSubsetSum(ns, target) {
+  const xs = [...ns];
+  while (xs.length > 0) {
+    const x = xs.pop();
+    if (x === target) {
+      yield [x];
     }
-    else {
-      const maybeSolution = await runSubsetSumWorker(copy, target - n);
-      if (maybeSolution) {
-        return [n, ...maybeSolution];
-      }
+    for (const result of sequentialNaiveSubsetSum(xs, target - x)) {
+      yield [x, ...result];
     }
   }
-
-  return null;
-}
-
-
-
-// export function* naiveSubsetSum(ns, target) {
-//   const xs = [...ns];
-//   while (xs.length > 0) {
-//     const x = xs.pop();
-//     if (x === target) {
-//       yield [x];
-//     }
-//     for (const result of naiveSubsetSum(xs, target - x)) {
-//       yield [x, ...result];
-//     }
-//   }
-// } // function naiveSubsetSum
+} // function naiveSubsetSum
 
 export async function testSubsetSum() {
-  // const [ns, target] = randomSubsetSumProblem();
-  const {ns, target} = problem;
-  // const [ns, target] = [[3, 34, 4, 12, 5, 2], 9]
-  // const [ns, target] = [[3, 1, 5, 9, 12, 7, 2, 4, 10, 6, 8], 15]
-  // const [ns, target] = [[3, 1, 5, 9, 12, 7, 2, 4, 10, 6, 8, 20, 30], 65]
-  // const [ns, target] = [[3, 5, 1, 8, 4, 2, 6, 9, 7, 10, 12, 14, 11, 13], 20]
-  // const [ns, target] = [[2, 4, 7, 1, 10, 3, 5, 12, 8, 6, 11, 14, 9, 13, 15], 23]
+  const [ns, target] = randomSubsetSumProblem();
+  // const {ns, target} = problem;
 
   const startTime = Date.now();
-  // const firstSolution = naiveSubsetSum(ns, target).next().value ?? null;
+  // const firstSolution = sequentialNaiveSubsetSum(ns, target).next().value ?? null;
+  const firstSolution = await parallelNaiveSubsetSum(ns, target);
 
-  const firstSolution = await naiveSubsetSum(ns, target);
   const time = (Date.now() - startTime) / 1e3;
   return { ns, target, firstSolution, time };
 } // function testSubsetSum
 
 let problem = {
   "ns": [
-      345,
-      21,
-      449,
-      59,
-      405,
-      385,
-      60,
-      250,
-      64,
-      282,
-      304,
-      230,
-      110,
-      0,
-      437,
-      326,
-      44,
-      410,
-      30,
-      389,
-      478,
-      381,
-      442,
-      377,
-      448
+      438,
+      348,
+      296,
+      397,
+      484,
+      94,
+      254,
+      148,
+      140,
+      209,
+      126,
+      61,
+      25,
+      196,
+      193,
+      338,
+      342,
+      3,
+      29,
+      498,
+      476,
+      176,
+      240,
+      475,
+      199
   ],
-  "target": 103,
+  "target": 413,
   "firstSolution": [
-      44,
-      0,
-      59
+      193,
+      126,
+      94
   ],
-  "time": 6.437
+  "time": 0.188
 }
