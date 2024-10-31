@@ -17,15 +17,31 @@ export function echoWorker() {
   return worker;
 } // function echoWorker
 
-export function tickWorker(period = 500) {
+export function tickWorker(period = 500, ticks = Infinity) {
   if (Number.isNaN(+period)) {
     throw new Error(`Invalid period ${period}!`);
   }
+  if (+ticks < 0) {
+    throw new Error(`Invalid ticks ${ticks}!`);
+  }
   const initWorker = (period) => {
-    setInterval(() => self.postMessage(Date.now()), +period);
+    setInterval(() => {
+      self.postMessage(Date.now())
+    }, +period);
   };
   const worker = newWorker(`(${initWorker})(${+period});`);
-  worker.onmessage = (event) => console.log(event.data);
+  if (ticks == 0) {
+    worker.terminate();
+  }
+  else {
+    worker.onmessage = (event) => {
+      console.log(event.data);
+      ticks--;
+      if (ticks == 0) {
+        worker.terminate();
+      }
+    };
+  }
   return worker;
 } // function tickWorker
 
