@@ -126,11 +126,5 @@ let problem = {
       475,
       199
   ],
-  "target": 413,
-  "firstSolution": [
-      193,
-      126,
-      94
-  ],
-  "time": 0.188
+  "target": 413
 }
