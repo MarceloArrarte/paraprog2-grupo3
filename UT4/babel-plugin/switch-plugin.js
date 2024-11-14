@@ -37,13 +37,30 @@ function pluginAlgebraiquicSimplification({ types: t }){
       UnaryExpression: {
         exit(path) {
           const { operator, argument } = path.node;
-          if (operator === '!' && t.isBooleanLiteral(argument)) {
-            path.replaceWith(t.booleanLiteral(!argument.value));
-          }
-        }
+          replaceUnaryWithLiteralsWithLiteral({ t, path, operator,argument });
       }
     }
   }
+}
+function replaceUnaryWithLiteralsWithLiteral({ t, path, operator, argument }){
+  if(!(t.isBooleanLiteral(argument) || t.isNumericLiteral(argument))){
+    return
+  }
+
+  const unary_operator = {
+    '!' : (a, t) => t.booleanLiteral(!a),
+    '+' : (a, t) => t.numericLiteral(+a),
+    '-' : (a, t) => t.numericLiteral(-a),
+    '~' : (a, t) => t.numericLiteral(~a),
+  }
+  if (operator in unary_operator) {
+    const result = unary_operator[operator](argument.value, t);
+    path.replaceWith(result);
+    return;
+  } 
+  throw new Error(`Unario no valido`);
+  
+}
 }
 
 function replaceBinaryWithLiteralsWithLiteral({ t, path, operator, left, right }) {
@@ -77,16 +94,17 @@ function replaceBinaryWithLiteralsWithLiteral({ t, path, operator, left, right }
   };
 
   let result;
-
   if (operator in numericOperators) {
     result = numericOperators[operator](left.value, right.value);
     path.replaceWith(t.numericLiteral(result));
-  } else if (operator in booleanOperators) {
+    return;
+  } 
+  if(operator in booleanOperators) {
     result = booleanOperators[operator](left.value, right.value);
     path.replaceWith(t.booleanLiteral(result));
-  } else {
-    throw new Error(`Operador no soportado: ${operator}`);
+    return;
   }
+  throw new Error(`Operador no soportado: ${operator}`);
 }
 
 const test1 = `
@@ -101,7 +119,7 @@ function f(x) {
 
 const test2 = `
 function f(x) {
-  x = true == 1 * 2;
+  x = -1 >>> 6;
 }
 `;
 
