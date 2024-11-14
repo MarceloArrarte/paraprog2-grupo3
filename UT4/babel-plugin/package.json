@@ -1,0 +1,9 @@
+{
+  "dependencies": {
+    "@babel/core": "^7.22.10"
+  },
+  "scripts": {
+    "start": "node switch-plugin.js"
+  },
+  "type": "module"
+}
