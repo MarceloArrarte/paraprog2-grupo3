@@ -1,29 +1,5 @@
 import { transformSync } from '@babel/core';
 
-// Check <https://babeljs.io/docs/babel-types>.
-function pluginSwitchComma({ types: t }) {
-  return {
-    visitor: {
-      SwitchStatement(path) {
-        path.node.cases = [...(function* () {
-          for (const c of path.node.cases) {
-            print('b')
-            if (c.test?.type !== 'SequenceExpression') {
-              yield c;
-            } else {
-              for (const caseTest of c.test.expressions.slice(0, -1)) {
-                yield t.switchCase(caseTest, []);
-              }
-              yield t.switchCase(c.test.expressions.at(-1), c.consequent);
-            }
-          }
-        })()];
-      }
-    } // visitor
-  };
-}; // function pluginSwitchComma
-
-
 function pluginAlgebraiquicSimplification({ types: t }){
   return {
     visitor: {
@@ -38,13 +14,33 @@ function pluginAlgebraiquicSimplification({ types: t }){
         exit(path) {
           const { operator, argument } = path.node;
           replaceUnaryWithLiteralsWithLiteral({ t, path, operator,argument });
+        }
+      },
+      ConditionalExpression: {
+        exit(path) {
+          const { test, consequent, alternate } = path.node;
+          optimizeTernaryExpression({ t, path, test, consequent, alternate });
+        }
+      },
+      IfStatement: {
+        exit(path) {
+          const { test, consequent, alternate } = path.node;
+          optimizeIfStatement({ t, path, test, consequent, alternate });
+        }
+      },
+      WhileStatement: {
+        exit(path) {
+          const { test, body } = path.node;
+          optimizeWhileStatement({ t, path, test, body });
+        }
       }
     }
   }
 }
+
 function replaceUnaryWithLiteralsWithLiteral({ t, path, operator, argument }){
   if(!(t.isBooleanLiteral(argument) || t.isNumericLiteral(argument))){
-    return
+    return;
   }
 
   const unary_operator = {
@@ -61,7 +57,7 @@ function replaceUnaryWithLiteralsWithLiteral({ t, path, operator, argument }){
   throw new Error(`Unario no valido`);
   
 }
-}
+
 
 function replaceBinaryWithLiteralsWithLiteral({ t, path, operator, left, right }) {
   const numericOperators = {
@@ -107,31 +103,113 @@ function replaceBinaryWithLiteralsWithLiteral({ t, path, operator, left, right }
   throw new Error(`Operador no soportado: ${operator}`);
 }
 
-const test1 = `
-function f(x) {
-  switch (x) {
-    case 0: return 1;
-    case 1, 2, 3: return x;
-    default: return NaN;
+function optimizeTernaryExpression({ t, path, test, consequent, alternate }) {
+  if (!t.isBooleanLiteral(test)) {
+    return;
   }
+  if (test.value === true) {
+    path.replaceWith(consequent);
+    return;
+  }
+  path.replaceWith(alternate);
+    
+}
+
+function optimizeIfStatement({ t, path, test, consequent, alternate }) {
+  if (t.isBooleanLiteral(test)) {
+    if (test.value === true) {
+      path.replaceWith(consequent);
+    } else if (alternate) {
+      path.replaceWith(alternate);
+    } else {
+      path.remove();
+    }
+  } else if (t.isNumericLiteral(test)) {
+    if (test.value === 0 || Number.isNaN(test.value)) {
+      if (alternate) {
+        path.replaceWith(alternate);
+      } else {
+        path.remove();
+      }
+    } else {
+      path.replaceWith(consequent);
+    }
+  }
+}
+
+function optimizeWhileStatement({ t, path, test, body }) {
+  if (t.isBooleanLiteral(test) && test.value === false) {
+    path.remove();
+  }
+}
+
+
+const testFalsaParte1 = `
+function f(x) {
+  x = -64 >> 2
+  resultadoEsperadoArriba = -16
+
+  y = 64 >>> 2
+  resultadoEsperadoArriba = 16
+
+  z = 3 << 3
+  resultadoEsperadoArriba = 24
+
+  gusanoLoco = -64 >> 2 >>> 2 << 3
+  resultadoEsperadoArriba = -32
 }
 `;
 
-const test2 = `
+const testFalsaParte2 = `
 function f(x) {
-  x = -1 >>> 6;
+  y = true ? 6 : 1;
+  resultadoEsperadoArriba = 6
+
+  x = (false ? 6 : 1) - 1;
+  resultadoEsperadoArriba = 0
+
+  guambia = (( 3 === 3 ? 3 * 2 : 33333333 / 2) + ( 3 == 1 ? 333333 : 2)) - 1;
+  resultadoEsperadoArriba = 7
+
+  valienteComoLaPrincesa = (( 3 != 2 ? 3 * 2 : 33333333 / 2) + ( 3 !== 3 ? 333333 : 2)) - 1;
+  resultadoEsperadoArriba = 7
+
+}
+`;
+const testVerdaderaParte1 = `
+function f(x) {
+  if (true) { x = 1; } else { x = 2; }
+  resultadoEsperadoArriba = 1
+
+  if (0) { y = 1; } else { y = 2; }
+  resultadoEsperadoArriba = 2
+
+  if (1) { z = 3; }
+  resultadoEsperadoArriba = 3
+}
+`;
+
+const testVerdaderaParte2 = `
+function f(x) {
+  while (1 != 2) { a = 4; }
+  resultadoEsperadoArriba =  "ver true en el while y lo de adentro igual"
 }
 `;
 
 function main() {
-  const codeIn = test2;
+  const tests = [testFalsaParte1, testFalsaParte2, testVerdaderaParte1, testVerdaderaParte2];
+  const pluginOptions = {
+    plugins: [pluginAlgebraiquicSimplification],
+  };
 
-  const {
-    ast, code: codeOut,
-  } = transformSync(codeIn, {
-    plugins: [pluginAlgebraiquicSimplification], 
+  tests.forEach((codeIn, index) => {
+    const { code: codeOut } = transformSync(codeIn, pluginOptions);
+    console.log(`Test ${index + 1}:\n`);
+    console.log(`Código de entrada:\n${codeIn}\n`);
+    console.log(">>>>\n");
+    console.log(`Código transformado:\n${codeOut}\n`);
   });
-  console.log(`${codeIn}\n\n  >>>>  \n\n${codeOut}`);
-} // main
+}
+
 
 main();
