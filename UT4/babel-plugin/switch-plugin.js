@@ -30,12 +30,15 @@ function pluginAlgebraiquicSimplification({ types: t }){
       BinaryExpression: {
         exit(path) {
           const { operator, left, right } = path.node;
-          if (t.isNumericLiteral(left) && t.isNumericLiteral(right)) {
-            replaceBinaryWithLiteralsWithLiteral({ t, path, operator, left, right })
-          }
-          // Verifica para operadores `&&` y `||` donde uno de los operandos es un literal
-          if ((t.isNumericLiteral(left) || t.isNumericLiteral(right)) && (operator === '&&' || operator === '||')) {
-            replaceBinaryWithLiteralsWithLiteral({ t, path, operator, left, right });
+          replaceBinaryWithLiteralsWithLiteral({ t, path, operator, left, right });
+          
+        }
+      },
+      UnaryExpression: {
+        exit(path) {
+          const { operator, argument } = path.node;
+          if (operator === '!' && t.isBooleanLiteral(argument)) {
+            path.replaceWith(t.booleanLiteral(!argument.value));
           }
         }
       }
@@ -44,57 +47,45 @@ function pluginAlgebraiquicSimplification({ types: t }){
 }
 
 function replaceBinaryWithLiteralsWithLiteral({ t, path, operator, left, right }) {
-  switch (operator) {
-    case '+':
-      path.replaceWith(t.numericLiteral(left.value + right.value));
-      break;
-    case '-':
-      path.replaceWith(t.numericLiteral(left.value - right.value));
-      break;
-    case '*':
-      path.replaceWith(t.numericLiteral(left.value * right.value));
-      break;
-    case '/':
-      path.replaceWith(t.numericLiteral(left.value / right.value));
-      break;
-    case '%':
-      path.replaceWith(t.numericLiteral(left.value % right.value));
-      break;
-    case '**':
-      path.replaceWith(t.numericLiteral(left.value ** right.value));
-      break;
-    case '&&':
-      path.replaceWith(t.numericLiteral(left.value && right.value ? right.value : 0));
-      break;
-    case '||':
-      path.replaceWith(left.value !== 0 ? t.numericLiteral(left.value): right.value);
-      break;
-    case '==':
-      path.replaceWith(t.booleanLiteral(left.value == right.value));
-      break;
-    case '===':
-      path.replaceWith(t.booleanLiteral(left.value === right.value));
-      break;
-    case '!=':
-      path.replaceWith(t.booleanLiteral(left.value != right.value));
-      break;
-    case '!==':
-      path.replaceWith(t.booleanLiteral(left.value !== right.value));
-      break;
-    case '>':
-      path.replaceWith(t.booleanLiteral(left.value > right.value));
-      break;
-    case '<':
-      path.replaceWith(t.booleanLiteral(left.value < right.value));
-      break;
-    case '>=':
-      path.replaceWith(t.booleanLiteral(left.value >= right.value));
-      break;
-    case '<=':
-      path.replaceWith(t.booleanLiteral(left.value <= right.value));
-      break;
-    default:
-      throw new Error('Que haces capo lpm')
+  const numericOperators = {
+    '+': (a, b) => a + b,
+    '-': (a, b) => a - b,
+    '*': (a, b) => a * b,
+    '/': (a, b) => a / b,
+    '%': (a, b) => a % b,
+    '**': (a, b) => a ** b,
+    '|': (a, b) => a | b,
+    '&': (a, b) => a & b,
+    '^': (a, b) => a ^ b,
+    '<<': (a, b) => a << b,
+    '>>': (a, b) => a >> b,
+    '>>>': (a, b) => a >>> b,
+  };
+
+  const booleanOperators = {
+    '&&': (a, b) => a && b,
+    '||': (a, b) => a || b,
+    '??': (a, b) => a ?? b,
+    '==': (a, b) => a == b,
+    '===': (a, b) => a === b,
+    '!=': (a, b) => a != b,
+    '!==': (a, b) => a !== b,
+    '>': (a, b) => a > b,
+    '<': (a, b) => a < b,
+    '>=': (a, b) => a >= b,
+    '<=': (a, b) => a <= b,
+  };
+
+  let result;
+
+  if (operator in numericOperators) {
+    result = numericOperators[operator](left.value, right.value);
+    path.replaceWith(t.numericLiteral(result));
+  } else if (operator in booleanOperators) {
+    result = booleanOperators[operator](left.value, right.value);
+    path.replaceWith(t.booleanLiteral(result));
+  } else {
+    throw new Error(`Operador no soportado: ${operator}`);
   }
 }
 
@@ -110,7 +101,7 @@ function f(x) {
 
 const test2 = `
 function f(x) {
-  x = 0 && 1;
+  x = true == 1 * 2;
 }
 `;
 
@@ -123,14 +114,6 @@ function main() {
     plugins: [pluginAlgebraiquicSimplification], 
   });
   console.log(`${codeIn}\n\n  >>>>  \n\n${codeOut}`);
-
-  // const codeIn = test1;
-  // const {
-  //   ast, code: codeOut,
-  // } = transformSync(codeIn, {
-  //   plugins: [pluginSwitchComma], 
-  // });
-  // console.log(`${codeIn}\n\n  >>>>  \n\n${codeOut}`);
 } // main
 
 main();
